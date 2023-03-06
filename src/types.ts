@@ -3,6 +3,7 @@ import {
   MouseEventHandler,
   TouchEvent as ReactTouchEvent,
   TouchEventHandler,
+  PointerEventHandler
 } from 'react';
 
 export type Coordinates = {
@@ -24,15 +25,16 @@ export type LongPressCallback<Target = Element, Context = unknown> = (
 ) => void;
 
 export enum LongPressDetectEvents {
-  BOTH = 'both',
+  ALL = 'all',
+  POINTER = 'pointer',
   MOUSE = 'mouse',
   TOUCH = 'touch',
 }
 
 export type LongPressResult<
   Target,
-  DetectType extends LongPressDetectEvents = LongPressDetectEvents.BOTH
-> = DetectType extends LongPressDetectEvents.BOTH
+  DetectType extends LongPressDetectEvents = LongPressDetectEvents.ALL
+> = DetectType extends LongPressDetectEvents.ALL
   ? {
       onMouseDown: MouseEventHandler<Target>;
       onMouseUp: MouseEventHandler<Target>;
@@ -41,6 +43,10 @@ export type LongPressResult<
       onTouchStart: TouchEventHandler<Target>;
       onTouchMove: TouchEventHandler<Target>;
       onTouchEnd: TouchEventHandler<Target>;
+      onPointerDown: PointerEventHandler<Target>;
+      onPointerUp: PointerEventHandler<Target>;
+      onPointerMove: PointerEventHandler<Target>;
+      onPointerLeave: PointerEventHandler<Target>;
     }
   : DetectType extends LongPressDetectEvents.MOUSE
   ? {
@@ -54,6 +60,13 @@ export type LongPressResult<
       onTouchStart: TouchEventHandler<Target>;
       onTouchMove: TouchEventHandler<Target>;
       onTouchEnd: TouchEventHandler<Target>;
+    }
+  : DetectType extends LongPressDetectEvents.POINTER
+  ? {
+      onPointerDown: PointerEventHandler<Target>;
+      onPointerUp: PointerEventHandler<Target>;
+      onPointerMove: PointerEventHandler<Target>;
+      onPointerLeave: PointerEventHandler<Target>;
     }
   : never;
 export type EmptyObject = Record<string, never>;

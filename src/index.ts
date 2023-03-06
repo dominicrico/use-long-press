@@ -1,4 +1,4 @@
-import { MouseEventHandler, TouchEventHandler, useCallback, useEffect, useMemo, useRef } from 'react';
+import { MouseEventHandler, TouchEventHandler, PointerEventHandler, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   CallableContextResult,
   Coordinates,
@@ -11,7 +11,7 @@ import {
   LongPressOptions,
   LongPressResult,
 } from './types';
-import { getCurrentPosition, isMouseEvent, isTouchEvent } from './utils';
+import { getCurrentPosition, isMouseEvent, isTouchEvent, isPointerEvent } from './utils';
 
 export function useLongPress<Target = Element, Context = unknown>(
   callback: null,
@@ -69,7 +69,7 @@ export function useLongPress<
   {
     threshold = 400,
     captureEvent = false,
-    detect = LongPressDetectEvents.BOTH,
+    detect = LongPressDetectEvents.ALL,
     cancelOnMovement = false,
     filterEvents,
     onStart,
@@ -92,7 +92,7 @@ export function useLongPress<
       }
 
       // Ignore events other than mouse and touch
-      if (!isMouseEvent(event) && !isTouchEvent(event)) {
+      if (!isMouseEvent(event) && !isTouchEvent(event) && !isPointerEvent(event)) {
         return;
       }
 
@@ -125,7 +125,7 @@ export function useLongPress<
   const cancel = useCallback(
     (context?: Context, reason?: LongPressEventReason) => (event: LongPressEvent<Target>) => {
       // Ignore events other than mouse and touch
-      if (!isMouseEvent(event) && !isTouchEvent(event)) {
+      if (!isMouseEvent(event) && !isTouchEvent(event) && !isPointerEvent(event)) {
         return;
       }
 
@@ -153,7 +153,6 @@ export function useLongPress<
 
   const handleMove = useCallback(
     (context?: Context) => (event: LongPressEvent<Target>) => {
-      onMove?.(event, { context });
       if (cancelOnMovement && startPosition.current) {
         const currentPosition = getCurrentPosition(event);
         /* istanbul ignore else */
@@ -166,6 +165,7 @@ export function useLongPress<
 
           // If moved outside move tolerance box then cancel long press
           if (movedDistance.x > moveThreshold || movedDistance.y > moveThreshold) {
+            onMove?.(event, { context });
             cancel(context, LongPressEventReason.CANCELED_BY_MOVEMENT)(event);
           }
         }
@@ -201,6 +201,13 @@ export function useLongPress<
         onTouchEnd: cancel(context) as TouchEventHandler<Target>,
       };
 
+      const pointerHandlers = {
+        onPointerDown:  start(context) as PointerEventHandler<Target>,
+        onPointerMove: handleMove(context) as PointerEventHandler<Target>,
+        onPointerUp: cancel(context) as PointerEventHandler<Target>,
+        onPointerLeave: cancel(context) as PointerEventHandler<Target>
+      }
+
       if (callback === null) {
         return {};
       }
@@ -213,7 +220,11 @@ export function useLongPress<
         return touchHandlers;
       }
 
-      return { ...mouseHandlers, ...touchHandlers };
+      if (detect === LongPressDetectEvents.POINTER) {
+        return pointerHandlers;
+      }
+
+      return { ...mouseHandlers, ...touchHandlers, ...pointerHandlers };
     }
 
     return result;
